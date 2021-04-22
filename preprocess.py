@@ -1,14 +1,15 @@
 import pandas as pd
 import numpy as np
-from scipy import spatial
+# from scipy import spatial
 import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
+# from sklearn.manifold import TSNE
 import nltk
 import string
-from keras.preprocessing.text import Tokenizer
+# from keras.preprocessing.text import Tokenizer
 import tensorflow as tf
 import csv
 
+#-*- coding: utf-8 -*-
 
 def import_pretrained_embeddings(path):
     embeddings_dict = {}
@@ -28,45 +29,50 @@ def find_closest_embeddings(embedding):
 # print(find_closest_embeddings(embeddings_dict["king"])[1:6])
 
 
-
-def import_data(filepaths_dict):
+def import_data(filepaths_dict, embedding):
     
-    df_all = pd.DataFrame(columns=['paragraph', 'author'])
-
     stop_words = set(nltk.corpus.stopwords.words('english'))
-
+    
+    lst_all = []
     for author, filepath in filepaths_dict.items():
         # get rows from .txt file
-        with open(filepath, newline='\n\n') as f:
-            reader = csv.reader(f)
-            books_sentences = list(reader)
-        
+        with open(filepath) as f:
+            reader = f.read()
+            reader = reader.split("\n\n")
+
             tokenized_paragraphs = []
         
             # iterate through every text row to clean it up
-            for sample_idx, paragraph in df_author_rows['paragraph']:
+            for sample_idx, paragraph in enumerate(reader):
                 # 1. remove punctuations
                 paragraph = paragraph.translate(str.maketrans('','',string.punctuation))
+                paragraph = paragraph.replace('\n', ' ')
                 # 2. tokenize
                 tokens = nltk.word_tokenize(paragraph)
                 # 3. remove stop words
-                tokens = [w.lower() for w in tokens if not w in stop_words]
+
+                vectors = []
                 
-                tokenized_paragraphs.append(tokens)
+                for token in tokens:
+                    if not token in stop_words:
+                        try:
+                            vector = embedding[token.lower()]
+                            vectors.append(vector)
+                        except KeyError:
+                            continue
+                        
 
-        df_all['paragraph'].append(tokenized_paragraphs)
-        df_all['author'].append(author)
-        print("df all has rows:", len(df_all))
+            
+                # tokenized_paragraphs.append(list(vectors))
+                # assert(len(tokenized_paragraphs[sample_idx]) == len(vectors))
+                thisrow = [vectors, author]
+                
+                lst_all.append(thisrow)
     
-    
-    df = pd.concat(df_list)
-    
-    return df
-
+    return lst_all
 
 def vectorize_data(tokenized_data, embeddings):
     tokens = tokenized_data[:]['paragraph']
-
 
     for sample_idx, sentence in enumerate(tokens):
 
@@ -87,15 +93,13 @@ def vectorize_data(tokenized_data, embeddings):
 
 if "__main__" == __name__:
     # print(tf.config.list_physical_devices('GPU'))
-    embeddings_dict = import_pretrained_embeddings('../glove.6B.50d.txt')
+    embeddings_dict = import_pretrained_embeddings('glove.6B.50d.txt')
 
     filepaths_dict = {'fd': './a4-data/q1/fd.txt',
                 'acd': './a4-data/q1/acd.txt',
                 'ja': './a4-data/q1/ja.txt'}
 
-    tokenized_data = import_data(filepaths_dict)
+    tokenized_data = import_data(filepaths_dict, embeddings_dict)
 
-    print(tokenized_data)
-    vectorized_data = vectorize_data(tokenized_data, embeddings_dict)
 
 
